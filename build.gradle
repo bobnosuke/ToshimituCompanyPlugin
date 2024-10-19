@@ -1,0 +1,111 @@
+import groovy.json.JsonSlurper
+
+import java.nio.file.Files
+
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+group project.plugin_group
+version project.plugin_version
+archivesBaseName = project.plugin_name
+
+def semver = project.minecraft_version.tokenize('.')
+ext.plugin_api = "${semver[0]}.${semver[1]}"
+
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+    maven {
+        url = 'https://oss.sonatype.org/content/repositories/snapshots/'
+    }
+    maven {
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+    maven {
+        url = 'https://repo.codemc.io/repository/maven-public/'
+    }
+    maven {
+        url = 'https://repo.minebench.de/'
+    }
+}
+
+dependencies {
+    compileOnly "io.papermc.paper:paper-api:${project.minecraft_version}-R0.1-SNAPSHOT"
+    compileOnly 'net.milkbowl.vault:VaultAPI:1.7'
+    compileOnly 'com.acrobot.chestshop:chestshop:3.12'
+    implementation 'org.spongepowered:configurate-yaml:4.0.0'
+
+    compileOnly 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+processResources {
+    expand project.properties
+}
+
+jar {
+    archiveName = "${archivesBaseName}-plain.jar"
+}
+
+build {
+    dependsOn shadowJar
+}
+
+shadowJar {
+    archiveFileName = "${archivesBaseName}.jar"
+}
+
+def serverDir = file("${project.buildDir}/server")
+def serverJar = file("${serverDir}/paper-${project.minecraft_version}.jar")
+def pluginsDir = file("${serverDir}/plugins")
+def pluginJar = file("${pluginsDir}/${archivesBaseName}.jar")
+
+tasks.register('prepare') {
+    group 'server'
+    onlyIf {
+        !serverJar.exists()
+    }
+    doFirst {
+        serverDir.mkdirs()
+        def baseUrl = 'https://papermc.io/api/v2/projects/paper'
+        def builds = new URL("${baseUrl}/version_group/${semver[0]}.${semver[1]}/builds")
+        def latest = new JsonSlurper()
+                .parseText(builds.text)
+                .builds
+                .reverse()
+                .find { it.version == project.minecraft_version }
+
+        def fileName = latest.downloads.application.name
+        def jarUrl = new URL("${baseUrl}/versions/${latest.version}/builds/${latest.build}/downloads/${fileName}")
+        serverJar << jarUrl.openStream()
+    }
+}
+
+tasks.register('start', JavaExec) {
+    group 'server'
+    dependsOn 'prepare', 'build'
+
+    doFirst {
+        pluginsDir.mkdirs()
+        pluginJar.delete()
+        Files.createSymbolicLink(pluginJar.toPath(), shadowJar.outputs.getFiles().getSingleFile().toPath())
+    }
+
+    classpath = rootProject.files(serverJar)
+    workingDir = serverDir
+    main = 'io.papermc.paperclip.Main'
+    jvmArgs = ['-Ddisable.watchdog=true', '-Dcom.mojang.eula.agree=true']
+    args = ['--nogui']
+    standardInput = System.in
+}
