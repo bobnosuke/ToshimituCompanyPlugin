@@ -1,0 +1,62 @@
+name: ${plugin_name}
+version: ${plugin_version}
+main: ${plugin_main}
+api-version: ${plugin_api}
+depend: [ "Vault" , "ChestShop" ]
+
+commands:
+  company:
+    description: 企業を管理します
+    usage: /company <subCommand> [args...]
+    permission: company.help
+    aliases: [ "c" ]
+
+permissions:
+  company.help:
+    description: ヘルプを表示する権限
+    default: true
+  company.accept:
+    description: 企業に参加する権限
+    default: true
+  company.additem:
+    description: アイテムを追加する権限
+    default: op
+  company.confirm:
+    description: 保留中のアクションを実行する権限
+    default: true
+  company.create:
+    description: 企業を作成する権限
+    default: true
+  company.delete:
+    description: 企業を削除する権限
+    default: true
+  company.deposit:
+    description: 企業に所持金を預ける権限
+    default: true
+  company.join:
+    description: 企業に参加申請を送信する権限
+    default: true
+  company.leader:
+    description: 企業のリーダーを変更する権限
+    default: true
+  company.leave:
+    description: 企業から脱退する権限
+    default: true
+  company.list:
+    description: 企業一覧を表示する権限
+    default: true
+  company.menu:
+    description: 企業メニューを開く権限
+    default: true
+  company.purge:
+    description: 企業を強制的に削除する権限
+    default: op
+  company.removeitem:
+    description: アイテムを削除する権限
+    default: op
+  company.rename:
+    description: 企業名を変更する権限
+    default: true
+  company.withdraw:
+    description: 企業から所持金を引き出す権限
+    default: true
